@@ -1,0 +1,19 @@
+#!/usr/bin/with-contenv bash
+set -e
+
+PGSQL_HOME="${PGSQL_HOME:-/var/lib/postgresql}";
+PGDATA="${PGDATA:-${PGSQL_HOME}/data}"; # only created during initializing, not after
+
+PGSQL_EXECUTABLE="${PGSQL_EXECUTABLE:-/usr/bin/postgres}";
+# PGSQL_ARGS="${PGSQL_ARGS:-}"; # customizable args passed at runtime
+
+cd "${PGSQL_HOME}" || exit 1;
+
+s6-setuidgid ${S6_USER:-postgres} \
+exec \
+    ${PGSQL_EXECUTABLE} \
+    -D ${PGDATA} \
+    -h ${PGHOST:-0.0.0.0} \
+    ${PGPORT:+ -p ${PGPORT}} \
+    ${PGSQL_ARGS} \
+    ;

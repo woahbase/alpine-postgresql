@@ -1,0 +1,132 @@
+#!/usr/bin/with-contenv bash
+# reference: https://github.com/docker-library/postgres/blob/master/16/alpine3.21/docker-entrypoint.sh
+
+set -eo pipefail;
+
+vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
+
+if [ -n "${PGSQL_SKIP_INITIALIZE}" ]; then exit 0; fi;
+# else init database only if PG_VERSION does not exist
+
+PGSQL_HOME="${PGSQL_HOME:-/var/lib/postgresql}";
+PGDATA="${PGDATA:-${PGSQL_HOME}/data}"; # only created during initializing, not after
+PGSQL_INITDIR="${PGSQL_INITDIR:-/initdb.d}"; # for initializer files
+
+# initialization parameters
+# POSTGRES_DB="${POSTGRES_DB:-test}"; # only created during initializing, not after
+# POSTGRES_INITDB_WALDIR="${POSTGRES_INITDB_WALDIR:-${PGSQL_HOME}/pg_wal }"; # should be outside of ${PGDATA}
+POSTGRES_PASSFILE="${POSTGRES_PASSFILE:-/run/s6/container_environment/POSTGRES_PASSWORD}"; # set from envvar passed to docker run...
+POSTGRES_USER="${POSTGRES_USER:-$S6_USER}";
+
+# custom configuration files
+PGSQL_CUSTOM_CONF="${PGSQL_CUSTOM_CONF:-/defaults/postgresql.conf}";
+PGSQL_CUSTOM_HBA="${PGSQL_CUSTOM_HBA:-/defaults/pg_hba.conf}";
+PGSQL_CUSTOM_IDENT="${PGSQL_CUSTOM_IDENT:-/defaults/pg_ident.conf}";
+
+if [ ! -e "${PGDATA}/PG_VERSION" ];
+then
+    vecho "Database found to be uninitialized, initializing..."
+
+    if [ ! -e "${POSTGRES_PASSFILE}" ];
+    then
+        vecho "Password-in-a-file is required to initialize database.";
+        vecho "Either mount and pass your password file as '-e POSTGRES_PASSFILE=/path/to/file'";
+        vecho "Or use the environment variable as '-e POSTGRES_PASSWORD=your-password'";
+        vecho "Exiting.";
+        exit 1;
+    fi;
+
+    s6-setuidgid ${S6_USER:-postgres} \
+        initdb \
+            -D "${PGDATA}" \
+            --username="${POSTGRES_USER}" \
+            --pwfile="${POSTGRES_PASSFILE}" \
+            ${POSTGRES_INITDB_WALDIR:+ --waldir "$POSTGRES_INITDB_WALDIR"} \
+            ${POSTGRES_INITDB_ARGS[@]} \
+        ;
+
+    vecho "Database default directories/files initialized.";
+
+    # by default, force all non-local connections to provide password (hashed)
+    # !! NOT for production
+    POSTGRES_HOST_AUTH_METHOD="${POSTGRES_HOST_AUTH_METHOD:-$(postgres -C password_encryption)}"; # only set during bootstrap, not after
+    vecho "Allowing non-local hosts to login using '${POSTGRES_HOST_AUTH_METHOD}'";
+    echo "host all all all ${POSTGRES_HOST_AUTH_METHOD}" >> "${PGDATA}/pg_hba.conf";
+    vecho "Consider using a \$PGSQL_CUSTOM_HBA file that suits your needs instead."
+
+    if [ -n "${PGSQL_SKIP_BOOTSTRAP}" ]; then exit 0; fi;
+    # else do default db creation and load initializer files
+
+    vecho "Starting temp-server for bootstrap.";
+    s6-setuidgid ${S6_USER:-postgres} \
+        /scripts/run.sh \
+            temp-server-start \
+        ;
+
+    # default args for psql
+    PSQL_ARGS="-v ON_ERROR_STOP=1 --username ${POSTGRES_USER} --no-password --no-psqlrc";
+
+    # create db if not exists
+    if [ -n "${POSTGRES_DB}" ];
+    then
+        dbExists="$(s6-setuidgid ${S6_USER:-postgres} \
+            psql ${PSQL_ARGS[@]} --dbname postgres --set newdb=${POSTGRES_DB} --tuples-only <<-EOSQL
+                SELECT 1 FROM pg_database WHERE datname = :'newdb';
+EOSQL
+        )";
+        if [ -z "${dbExists}" ];
+        then
+            vecho "Creating default database: ${POSTGRES_DB}";
+            s6-setuidgid ${S6_USER:-postgres} \
+                psql ${PSQL_ARGS[@]} --dbname postgres --set newdb=${POSTGRES_DB} <<-EOSQL
+                    CREATE DATABASE :"newdb" ;
+EOSQL
+        else
+            vecho "Skip creating default database: ${POSTGRES_DB}, already exists.";
+        fi;
+    fi;
+
+    s6-setuidgid ${S6_USER:-postgres} \
+        /scripts/run.sh \
+            initdb \
+            ${PSQL_ARGS[@]} \
+            ${POSTGRES_DB:+ --dbname "${POSTGRES_DB}"} \
+        ;
+
+    s6-setuidgid ${S6_USER:-postgres} \
+        /scripts/run.sh \
+            temp-server-stop \
+        ;
+fi;
+
+# bring in custom confs before starting service
+# WARNING! will REPLACE existing files
+if [ -n "${PGSQL_CUSTOM_CONF}" ] \
+&& [ -f "${PGSQL_CUSTOM_CONF}" ] \
+&& [ "$(cat ${PGSQL_CUSTOM_CONF} | md5sum)" != "$(cat ${PGDATA}/postgresql.conf | md5sum)" ];
+then
+    vecho "Copying custom configuration file.";
+    s6-setuidgid ${S6_USER:-postgres} \
+        cp -v "${PGSQL_CUSTOM_CONF}" "${PGDATA}/postgresql.conf";
+fi;
+
+if [ -n "${PGSQL_CUSTOM_HBA}" ] \
+&& [ -f "${PGSQL_CUSTOM_HBA}" ] \
+&& [ "$(cat ${PGSQL_CUSTOM_HBA} | md5sum)" != "$(cat ${PGDATA}/pg_hba.conf | md5sum)" ];
+then
+    vecho "Copying custom host-based-authcontrol file.";
+    s6-setuidgid ${S6_USER:-postgres} \
+        cp -v "${PGSQL_CUSTOM_HBA}" "${PGDATA}/pg_hba.conf";
+fi;
+
+if [ -n "${PGSQL_CUSTOM_IDENT}" ] \
+&& [ -f "${PGSQL_CUSTOM_IDENT}" ] \
+&& [ "$(cat ${PGSQL_CUSTOM_IDENT} | md5sum)" != "$(cat ${PGDATA}/pg_ident.conf | md5sum)" ];
+then
+    vecho "Copying custom id-mapper file.";
+    s6-setuidgid ${S6_USER:-postgres} \
+        cp -v "${PGSQL_CUSTOM_IDENT}" "${PGDATA}/pg_ident.conf";
+fi;
+
+vecho "Sleeping 1 sec before starting service...";
+sleep 1;
