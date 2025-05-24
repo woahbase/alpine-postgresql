@@ -35,11 +35,84 @@ RUN set -xe \
         pg_top \
         # pgbackrest \
 #
-        # postgresql-age \
-        # postgresql-bdr-extension \
-        # postgresql-pgvector \
-        # postgresql-rum \
-        # postgresql-timescaledb \
+    && case "${PGMAJOR}" in \
+        "17") { \
+                echo "http://dl-cdn.alpinelinux.org/alpine/v3.21/main"; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/v3.21/community"; \
+            } > /tmp/repo3.21 \
+            && apk add --no-cache --repositories-file "/tmp/repo3.21" \
+                # pg-gvm \
+                # pgpool \
+                # postgis \
+                postgresql-age \
+                postgresql-bdr-extension \
+                postgresql-hypopg \
+                postgresql-mysql_fdw \
+                postgresql-orafce \
+                postgresql-pg_cron \
+                postgresql-pg_roaringbitmap \
+                postgresql-pgvector \
+                postgresql-rum \
+                postgresql-sequential-uuids \
+                postgresql-shared_ispell \
+                postgresql-temporal_tables \
+                postgresql-timescaledb \
+                postgresql-topn \
+                postgresql-uint \
+                postgresql-url_encode \
+                # repmgr \
+        ;; \
+        "16") { \
+                echo "http://dl-cdn.alpinelinux.org/alpine/v3.20/main"; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/v3.20/community"; \
+            } > /tmp/repo3.20 \
+            && apk add --no-cache --repositories-file "/tmp/repo3.20" \
+                # pg-gvm \
+                # pgpool \
+                # postgis \
+                postgresql-age \
+                postgresql-bdr-extension \
+                postgresql-citus \
+                postgresql-hypopg \
+                postgresql-mysql_fdw \
+                postgresql-orafce \
+                postgresql-pg_cron \
+                postgresql-pg_roaringbitmap \
+                postgresql-pgvector \
+                postgresql-rum \
+                postgresql-sequential-uuids \
+                postgresql-shared_ispell \
+                postgresql-temporal_tables \
+                postgresql-timescaledb \
+                postgresql-topn \
+                postgresql-uint \
+                postgresql-url_encode \
+                # repmgr \
+        ;; \
+        "15") { \
+                echo "http://dl-cdn.alpinelinux.org/alpine/v3.18/main"; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/v3.18/community"; \
+            } > /tmp/repo3.18 \
+            && apk add --no-cache --repositories-file "/tmp/repo3.18" \
+                # pg-gvm \
+                # pgpool \
+                # postgis \
+                postgresql-bdr-extension \
+                postgresql-citus \
+                postgresql-hypopg \
+                postgresql-mysql_fdw \
+                postgresql-orafce \
+                postgresql-pg_cron \
+                postgresql-rum \
+                postgresql-sequential-uuids \
+                postgresql-shared_ispell \
+                postgresql-temporal_tables \
+                postgresql-timescaledb \
+                postgresql-uint \
+                postgresql-url_encode \
+                # repmgr \
+        ;; \
+       esac \
 #
     && if [ ! -e "/usr/bin/postgres" ]; then ln -sf $(which postgres${PGMAJOR}) /usr/bin/postgres; fi \
 #
