@@ -15,20 +15,23 @@ mkdir -p \
     ;
 
 # fix permissions
-vecho "Fixing permissions.";
-find \
-    "${PGDATA}" \
-    "${PGSQL_BACKUPDIR}" \
-    /var/run/postgresql \
-    \
-    \! -user ${S6_USER:-postgres} -exec \
-    chown --no-dereference \
-    ${S6_USER:-postgres}:${PGID:-1000} \
-    '{}' +;
+if [ -z "${PGSQL_SKIP_PERMFIX}" ] \
+&& [ "X${EUID}" == "X0" ]; # requires root
+then
+    vecho "Fixing permissions.";
+    find \
+        "${PGDATA}" \
+        "${PGSQL_BACKUPDIR}" \
+        /var/run/postgresql \
+        \
+        \! -user ${S6_USER:-postgres} -exec \
+        chown --no-dereference \
+        ${S6_USER:-postgres}:${PGID:-1000} \
+        '{}' +;
 
-# postgres nags if not set
-chmod 700 \
-    "${PGDATA}" \
-    "${PGSQL_BACKUPDIR}" \
-    ;
-
+    # postgres nags if not set
+    chmod 700 \
+        "${PGDATA}" \
+        "${PGSQL_BACKUPDIR}" \
+        ;
+fi;

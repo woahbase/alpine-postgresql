@@ -1,6 +1,8 @@
 #!/usr/bin/with-contenv bash
 set -e
 
+usercmd () { if [ "X${EUID}" != "X0" ]; then $@; else s6-setuidgid ${PUID:-1000}:${PGID:-1000} $@; fi; }
+
 PGSQL_HOME="${PGSQL_HOME:-/var/lib/postgresql}";
 PGDATA="${PGDATA:-${PGSQL_HOME}/data}"; # only created during initializing, not after
 
@@ -9,7 +11,7 @@ PGSQL_EXECUTABLE="${PGSQL_EXECUTABLE:-/usr/bin/postgres}";
 
 cd "${PGSQL_HOME}" || exit 1;
 
-s6-setuidgid ${S6_USER:-postgres} \
+usercmd \
 exec \
     ${PGSQL_EXECUTABLE} \
     -D ${PGDATA} \

@@ -9,7 +9,8 @@ PGDATA="${PGDATA:-${PGSQL_HOME}/data}"; # only created during initializing, not 
 PGSQL_BACKUPDIR="${PGSQL_BACKUPDIR:-${PGSQL_HOME}/backups}"; # for backups
 PGSQL_INITDIR="${PGSQL_INITDIR:-/initdb.d}"; # for initializer files
 
-if [ "X${EUID}" = "X0" ]; then vecho "must be run as a non-root postgresql user."; exit 1; fi;
+# must be run as a non-root postgresql user
+if [ "X${EUID}" = "X0" ]; then s6-setuidgid ${PUID:-1000}:${PGID:-1000} $0 $@; exit $?; fi;
 
 CMD="$1"; # required to select task to run
 

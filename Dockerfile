@@ -35,21 +35,25 @@ RUN set -xe \
         pg_top \
         # pgbackrest \
 #
+    # default postgresql requirement for extensions changes with alpine release
     && case "${PGMAJOR}" in \
-        "17") { \
-                echo "http://dl-cdn.alpinelinux.org/alpine/v3.21/main"; \
-                echo "http://dl-cdn.alpinelinux.org/alpine/v3.21/community"; \
-            } > /tmp/repo3.21 \
-            && apk add --no-cache --repositories-file "/tmp/repo3.21" \
+        "17") { REPO=v3.22; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/main"; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/community"; \
+              } > /tmp/repo \
+            && apk add --no-cache --repositories-file /tmp/repo \
+                # # from https://pkgs.alpinelinux.org/package/v3.22/main/x86_64/postgresql17
                 # pg-gvm \
                 # pgpool \
                 # postgis \
                 postgresql-age \
                 postgresql-bdr-extension \
+                postgresql-citus \
                 postgresql-hypopg \
                 postgresql-mysql_fdw \
                 postgresql-orafce \
                 postgresql-pg_cron \
+                postgresql-pg_graphql \
                 postgresql-pg_roaringbitmap \
                 postgresql-pgvector \
                 postgresql-rum \
@@ -62,11 +66,12 @@ RUN set -xe \
                 postgresql-url_encode \
                 # repmgr \
         ;; \
-        "16") { \
-                echo "http://dl-cdn.alpinelinux.org/alpine/v3.20/main"; \
-                echo "http://dl-cdn.alpinelinux.org/alpine/v3.20/community"; \
-            } > /tmp/repo3.20 \
-            && apk add --no-cache --repositories-file "/tmp/repo3.20" \
+        "16") { REPO=v3.20; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/main"; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/community"; \
+              } > /tmp/repo \
+            && apk add --no-cache --repositories-file /tmp/repo \
+                # # from https://pkgs.alpinelinux.org/package/v3.20/main/x86_64/postgresql16
                 # pg-gvm \
                 # pgpool \
                 # postgis \
@@ -89,11 +94,12 @@ RUN set -xe \
                 postgresql-url_encode \
                 # repmgr \
         ;; \
-        "15") { \
-                echo "http://dl-cdn.alpinelinux.org/alpine/v3.18/main"; \
-                echo "http://dl-cdn.alpinelinux.org/alpine/v3.18/community"; \
-            } > /tmp/repo3.18 \
-            && apk add --no-cache --repositories-file "/tmp/repo3.18" \
+        "15") { REPO=v3.18; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/main"; \
+                echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/community"; \
+              } > /tmp/repo \
+            && apk add --no-cache --repositories-file /tmp/repo \
+                # # from https://pkgs.alpinelinux.org/package/v3.18/main/x86_64/postgresql15
                 # pg-gvm \
                 # pgpool \
                 # postgis \
@@ -132,7 +138,7 @@ HEALTHCHECK \
     --start-period=5m \
     --timeout=10s \
     CMD \
-        s6-setuidgid ${POSTGRES_USER:-$S6_USER} /scripts/run.sh healthcheck \
+         /scripts/run.sh healthcheck \
     || exit 1
 #
 ENTRYPOINT ["/init"]
