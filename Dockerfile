@@ -53,7 +53,7 @@ RUN set -xe \
                 postgresql-mysql_fdw \
                 postgresql-orafce \
                 postgresql-pg_cron \
-                postgresql-pg_graphql \
+                # postgresql-pg_graphql \
                 postgresql-pg_roaringbitmap \
                 postgresql-pgvector \
                 postgresql-rum \
