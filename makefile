@@ -38,6 +38,10 @@ ifneq ($(PGMAJOR), 17)
 endif
 
 SKIP_loong64 := 1
+# no riscv64 for PGMAJOR=15
+ifeq ($(PGMAJOR), 15)
+	SKIP_riscv64 := 1
+endif
 # -- }}}
 
 # {{{ -- flags
