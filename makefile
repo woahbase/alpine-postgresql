@@ -22,18 +22,19 @@ IMAGETAG  ?= $(REGISTRY)/$(ORGNAME)/$(REPONAME):$(ARCH)
 CNTNAME   := docker_$(SVCNAME)
 CNTSHELL  := /bin/bash
 
-PGMAJOR   := 16
+PGMAJOR   := 18
 VERSION   ?= $(call get_svc_version)
 
 TESTCMD   := \
 	uname -a; \
 	postgres --version; \
+	# psql -U postgres -qAtc "select * from pg_available_extensions"; \
 	#
 
 # AlpineLinux has multiple versions of postgresql (15...17) in their
 # repositories. Skip updating latest tag when building an older
 # version so :latest always points to the most recent release.
-ifneq ($(PGMAJOR), 17)
+ifneq ($(PGMAJOR), 18)
 	SKIP_LATESTTAG := 1
 endif
 
