@@ -47,12 +47,12 @@ RUN set -xe \
                 postgis \
                 # postgresql-age \
                 postgresql-bdr-extension \
-                postgresql-citus \
+                # postgresql-citus \
                 postgresql-hypopg \
                 postgresql-mysql_fdw \
                 postgresql-orafce \
                 postgresql-pg_cron \
-                # postgresql-pg_graphql \
+                postgresql-pg_graphql \
                 postgresql-pg_roaringbitmap \
                 postgresql-pgvector \
                 postgresql-rum \
