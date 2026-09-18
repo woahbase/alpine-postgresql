@@ -31,7 +31,7 @@ RUN set -xe \
 #
     # default postgresql requirement for extensions changes with alpine release
     && case "${PGMAJOR}" in \
-        "18") { REPO=v3.23; \
+        "18") { REPO=v3.24; \
                 echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/main"; \
                 echo "http://dl-cdn.alpinelinux.org/alpine/${REPO}/community"; \
               } > /tmp/repo \
